@@ -31,3 +31,6 @@ The script will prompt you for:
 ## Usage
 Once installed, simply ask your nanobot to search the web (e.g., "Search the web for the latest news on AI"). The bot will automatically decide to use the `searxng-search` skill to retrieve the information.
 Optionally, you can instruct your bot to memorize (save in MEMORY.md) that searxng-search skill is preferred over web search tool.
+
+## License
+MIT
