@@ -11,7 +11,6 @@ By default, nanobot might be configured to use specific search APIs (just Brave 
 - Seamlessly replaces the default web search behavior for the bot.
 
 ## Requirements
-- **uv**: This tool requires `uv` to be installed on your system. `uv` is used to execute the Python script using PEP 723 inline script metadata (e.g., `# /// script dependencies = ["requests"]`). This allows the script to automatically manage its own dependencies on the fly without requiring you to manually set up a virtual environment.
 - **SearXNG**: A running instance of SearXNG with JSON format output enabled.
 
 ## Installation
