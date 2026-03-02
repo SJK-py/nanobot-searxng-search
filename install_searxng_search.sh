@@ -16,6 +16,11 @@ mkdir -p "$SKILL_DIR"
 mkdir -p "$TOOL_DIR"
 
 cat << 'EOF' > "$SKILL_DIR/SKILL.md"
+---
+name: searxng-search
+description: Search web using SearXNG instance, substitute for web search tool.
+---
+
 # SearXNG Search Skill
 
 This skill allows you to search the web using a self-hosted SearXNG instance instead of the default web search API.
