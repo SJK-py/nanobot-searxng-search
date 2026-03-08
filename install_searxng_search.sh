@@ -1,121 +1,63 @@
 #!/bin/bash
 
-echo "=== Install SearXNG Search Skill ==="
-read -p "Enter nanobot workspace path [default: ~/.nanobot/workspace]: " NANOBOT_PATH
-NANOBOT_PATH=${NANOBOT_PATH:-~/.nanobot/workspace}
-NANOBOT_PATH=$(eval echo "$NANOBOT_PATH")
+# Define the base raw GitHub URL for the repository
+REPO_BASE_URL="https://raw.githubusercontent.com/SJK-py/nanobot-searxng-search/main"
 
-read -p "Enter SearXNG Base URL (e.g., http://localhost:8080): " BASE_URL
-read -p "Enter search content length limit [default: 500]: " CONTENT_LEN_LIMIT
-CONTENT_LEN_LIMIT=${CONTENT_LEN_LIMIT:-500}
+# 1. Validate workspace directory by checking for 'skills' folder
+if [ ! -d "skills" ]; then
+    echo "Error: The 'skills' directory was not found."
+    echo "This script must be executed from the root of your nanobot workspace directory."
+    exit 1
+fi
 
-SKILL_DIR="$NANOBOT_PATH/skills/searxng-search"
-TOOL_DIR="$NANOBOT_PATH/skill-tools"
+# 2. Create the necessary directories
+echo "Creating directories..."
+mkdir -p skills/searxng-search/scripts
 
-mkdir -p "$SKILL_DIR"
-mkdir -p "$TOOL_DIR"
+# Function to handle backing up and downloading files
+download_file() {
+    local url=$1
+    local dest=$2
+    local filename=$(basename "$dest")
 
-cat << 'EOF' > "$SKILL_DIR/SKILL.md"
----
-name: searxng-search
-description: Search web using SearXNG instance, substitute for web search tool.
----
+    # 3. Rename old files with .bak extension if they already exist
+    if [ -f "$dest" ]; then
+        mv "$dest" "${dest}.bak"
+        echo "  -> Backed up existing '$filename' to '${filename}.bak'"
+    fi
 
-# SearXNG Search Skill
-
-This skill allows you to search the web using a self-hosted SearXNG instance instead of the default web search API.
-
-## How to Use
-
-Use the `exec` tool to run the Python script `searxng_search.py` located in `SKILL_TOOL_PATH`.
-
-### Parameters
-- `query` (Positional, required): The search query. Enclose in quotes.
-- `--count` (Optional): Number of results to return (default: 5).
-- `--time_range` (Optional): Time range of results (choices: `day`, `week`, `month`, `year`).
-- `--language` (Optional): Language code (e.g., `en`, `ko`).
-
-### Examples
-
-**Basic Search:**
-```bash
-python3 SKILL_TOOL_PATH "python latest version release date"
-```
-
-**Search with parameters:**
-```bash
-python3 SKILL_TOOL_PATH "AI news" --count 3 --time_range week --language en
-```
-
-### Output Format
-The script returns a JSON array containing the top search results. Each result includes `title`, `url`, `content` (truncated to save context), `score`, and optionally `publishedDate`.
-EOF
-sed -i "s|SKILL_TOOL_PATH|$TOOL_DIR/searxng_search.py|g" "$SKILL_DIR/SKILL.md"
-
-
-cat << 'EOF' > "$TOOL_DIR/searxng_search.py"
-#!/usr/bin/env python3
-import urllib.request
-import urllib.parse
-import json
-import argparse
-import sys
-
-BASE_URL = "REPLACE_BASE_URL"
-CONTENT_LEN_LIMIT = REPLACE_CONTENT_LEN_LIMIT
-
-def search(query, count=5, time_range=None, language=None):
-    params = {
-        'q': query,
-        'format': 'json',
-    }
-    if time_range:
-        params['time_range'] = time_range
-    if language:
-        params['language'] = language
-        
-    query_string = urllib.parse.urlencode(params)
-    url = f"{BASE_URL}/search?{query_string}"
+    # Download the file
+    echo "  -> Downloading '$filename'..."
+    curl -sS -f -L "$url" -o "$dest"
     
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'nanobot-skill/1.0'})
-        with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read().decode('utf-8'))
-            
-        results = data.get('results', [])
-        sanitized = []
-        for r in results[:count]:
-            content = r.get('content', '') or r.get('snippet', '')
-            if len(content) > CONTENT_LEN_LIMIT:
-                content = content[:CONTENT_LEN_LIMIT] + '...'
-                
-            sanitized.append({
-                'title': r.get('title', ''),
-                'url': r.get('url', ''),
-                'content': content,
-                'score': r.get('score'),
-                'publishedDate': r.get('publishedDate')
-            })
-            
-        print(json.dumps(sanitized, indent=2, ensure_ascii=False))
-        
-    except Exception as e:
-        print(json.dumps({'error': str(e)}), file=sys.stderr)
-        sys.exit(1)
+    if [ $? -ne 0 ]; then
+        echo "  -> Error: Failed to download '$filename'."
+    fi
+}
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="SearXNG Custom Search Skill")
-    parser.add_argument('query', help="Search query")
-    parser.add_argument('--count', type=int, default=5, help="Number of results to return")
-    parser.add_argument('--time_range', choices=['day', 'week', 'month', 'year'], help="Time range")
-    parser.add_argument('--language', help="Language (e.g., en, ko)")
-    
-    args = parser.parse_args()
-    search(args.query, args.count, args.time_range, args.language)
-EOF
+# 4 & 5. Download the files to their respective directories
+echo "Downloading files from repository..."
 
-sed -i "s|REPLACE_BASE_URL|$BASE_URL|g" "$TOOL_DIR/searxng_search.py"
-sed -i "s|REPLACE_CONTENT_LEN_LIMIT|$CONTENT_LEN_LIMIT|g" "$TOOL_DIR/searxng_search.py"
+# Download SKILL.md
+download_file "${REPO_BASE_URL}/skills/searxng-search/SKILL.md" "skills/searxng-search/SKILL.md"
+
+# Download searxng-search.py
+download_file "${REPO_BASE_URL}/skills/searxng-search/scripts/searxng-search.py" "skills/searxng-search/scripts/searxng-search.py"
+
+# Download example.env
+download_file "${REPO_BASE_URL}/skills/searxng-search/scripts/example.env" "skills/searxng-search/scripts/example.env"
+
+# 6. Output completion message and reminder
+echo ""
+echo "============================================================"
+echo "Installation complete! SearXNG Search skill has been added."
+echo "============================================================"
+echo "REMINDER: You must configure your environment variables."
+echo "An 'example.env' file has been placed in:"
+echo "  skills/searxng-search/scripts/example.env"
+echo ""
+echo "Please copy it to '.env' and populate it with your settings."
+echo "============================================================"
 chmod +x "$TOOL_DIR/searxng_search.py"
 
 echo "SearXNG Search Skill installed successfully!"
