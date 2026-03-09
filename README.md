@@ -1,35 +1,84 @@
-# SearXNG Search Skill for nanobot
+# SearXNG Search Skill for nanobot (rev.2)
 
-This project provides an installation script to add a custom "searxng-search" skill to your nanobot instance.
+A custom skill for your nanobot workspace that substitutes the default `web_search` tool with a self-hosted SearXNG instance. By keeping your search queries local, this skill is perfect for maintaining a fully private retrieval pipeline.
 
-## Overview
-By default, nanobot might be configured to use specific search APIs (just Brave for now). This custom skill allows you to bypass hardcoded search providers and route your AI's web searches through your own self-hosted SearXNG instance instead.
+## Changelog
 
-## Features
-- Direct integration with your personal SearXNG instance (utilizing JSON output).
-- Customizable Base URL and content length limits during installation.
-- Seamlessly replaces the default web search behavior for the bot.
-
-## Requirements
-- **SearXNG**: A running instance of SearXNG with JSON format output enabled.
+* **rev.2:** reworked installation script to refine directory scheme, pursuant to model skill directory scheme.
+* If updating from previous version, remove searxng_search.py from `skill-tools` directory after installation.
 
 ## Installation
-Run the included shell script:
+
+Follow these steps to install the skill automatically into your nanobot workspace.
+
+1. **Navigate to your workspace:** Open your terminal and ensure your current directory is the root of your nanobot workspace (the folder containing your `skills` directory).
+
 ```bash
+   cd /path/to/your/nanobot/workspace
+```
+
+2. **Download the installer:** Use `wget` to fetch the installation script directly from the repository.
+
+```bash
+wget "https://raw.githubusercontent.com/SJK-py/nanobot-searxng-search/main/install_searxng_search.sh"
+```
+
+3. **Execute the script:** Make the script executable and run it to set up the directories and download the necessary files.
+
+```bash
+chmod +x install_searxng_search.sh
 ./install_searxng_search.sh
 ```
-The script will prompt you for:
-- Your nanobot workspace path.
-- Your SearXNG base URL (e.g., `http://localhost:8080`).
-- The maximum content length limit for search results.
 
-*Note: The script will automatically create the following directories in your nanobot workspace if they don't already exist:*
-- `skills/searxng-search/` - where the `SKILL.md` instruction file is saved.
-- `skill-tools/` - where the actual `searxng_search.py` script is saved.
+Once installed, your nanobot will automatically detect the `searxng-search` skill and can begin using it for web queries.
 
-## Usage
-Once installed, simply ask your nanobot to search the web (e.g., "Search the web for the latest news on AI"). The bot will automatically decide to use the `searxng-search` skill to retrieve the information.
-Optionally, you can instruct your bot to memorize (save in MEMORY.md) that searxng-search skill is preferred over web search tool.
+## Ensuring Nanobot Prefers This Skill
+
+While the nanobot will detect the skill automatically, it may still occasionally default to its built-in web search.
+
+**Pro-Tip:** To guarantee your nanobot routes queries through your local SearXNG instance, you can optionally modify your `USER.md` file. Simply append a direct instruction, such as:
+
+> *"Always use the `searxng-search` skill instead of the built-in `web_search` tool for any web searches."*
+
+## Configuration
+
+Before the nanobot can successfully execute searches, you must configure the environment variables for the skill's underlying Python script.
+
+1. Navigate to the newly created `skills/searxng-search/scripts` directory.
+2. Copy the provided `example.env` to a new file named `.env`.
+3. Update the `.env` file with your specific instance details:
+* `BASE_URL`: The API base URL for your SearXNG instance (defaults to `http://localhost:8080`).
+* `CONTENT_LEN_LIMIT`: The character limit for each search result snippet (defaults to `500`). This is crucial for truncating long text to save valuable context space for your LLM.
+
+## How the Nanobot Uses It
+
+When web search is required, the nanobot uses the `exec` tool to run the helper Python script in the background.
+
+The nanobot will construct commands using the following syntax:
+
+```bash
+python3 [skill path]/scripts/searxng-search.py "<QUERY>" <Optional Parameters>
+```
+
+*Note: The nanobot must enclose the `<QUERY>` argument in quotes.*
+
+### Available Parameters to the Nanobot
+
+* `--count`: Number of results to return (defaults to 7 in the skill description).
+* `--time_range`: Restrict the time range of results (`day`, `week`, `month`, `year`).
+* `--language`: Language code for the search (e.g., `en`, `ko`).
+
+### Skill Output
+
+The helper script returns a JSON array containing the top search results to the nanobot. Each result object includes the `title`, `url`, `content`, `score`, and `publishedDate`.
+
+## Manual Usage (Optional)
+
+Though designed for autonomous nanobot use, the helper script can be executed independently from the command line for testing or general use:
+
+```bash
+python3 scripts/searxng-search.py "AI news" --count 5 --time_range week --language en
+```
 
 ## License
 MIT
