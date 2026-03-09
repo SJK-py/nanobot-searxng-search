@@ -77,7 +77,7 @@ The helper script returns a JSON array containing the top search results to the 
 Though designed for autonomous nanobot use, the helper script can be executed independently from the command line for testing or general use:
 
 ```bash
-python3 scripts/searxng-search.py "AI news" --count 5 --time_range week --language en
+python3 [path_to_workspace]/skills/searxng-search/scripts/searxng-search.py "AI news" --count 5 --time_range week --language en
 ```
 
 ## License
